@@ -523,9 +523,9 @@ def main():
 
 
     # Choose one of the following by uncommenting out the line
-    icmpHelperPing.sendPing("209.233.126.254")
-    # icmpHelperPing.sendPing("www.google.com")
-    # icmpHelperPing.sendPing("oregonstate.edu")
+    #icmpHelperPing.sendPing("209.233.126.254")
+    #icmpHelperPing.sendPing("www.google.com")
+    icmpHelperPing.sendPing("oregonstate.edu")
     # icmpHelperPing.sendPing("gaia.cs.umass.edu")
     # icmpHelperPing.traceRoute("oregonstate.edu")
 
