@@ -207,9 +207,47 @@ class IcmpHelperLibrary:
             self.__packHeader()                 # Header is rebuilt to include new checksum value
 
         def __validateIcmpReplyPacketWithOriginalPingData(self, icmpReplyPacket):
+
             # Hint: Work through comparing each value and identify if this is a valid response.
-            icmpReplyPacket.setIsValidResponse(True)
-            pass
+
+            # check Sequence Number
+            if self.getPacketSequenceNumber() == icmpReplyPacket.getIcmpSequenceNumber():
+                icmpReplyPacket.setIcmpSequenceNumber_isValid(True)
+                if self.__DEBUG_IcmpPacket:
+                    print('\nExpected Sequence Number: ' + str( self.getPacketSequenceNumber() ) )
+                    print('Reply Sequence Number: ' + str( icmpReplyPacket.getIcmpSequenceNumber() ) )
+                    print('Is Valid? ' + str( icmpReplyPacket.getIcmpSequenceNumber_isValid() ) )
+                else: 0
+            
+            # check Identifier
+            if self.getPacketIdentifier() == icmpReplyPacket.getIcmpIdentifier():
+                icmpReplyPacket.setIcmpIdentifier_isValid(True)
+                if self.__DEBUG_IcmpPacket:
+                    print('\nExpected Identifier: ' + str( self.getPacketIdentifier() ) )
+                    print('Reply Identifier: ' + str( icmpReplyPacket.getIcmpIdentifier() ) )
+                    print('Is Valid? ' + str( icmpReplyPacket.getIcmpIdentifier_isValid() ) )
+                else: 0
+            
+            # check Data
+            if self.getDataRaw() == icmpReplyPacket.getIcmpData():
+                icmpReplyPacket.setIcmpData_isValid(True)
+                if self.__DEBUG_IcmpPacket:
+                    print('\nExpected Data: ' + str( self.getDataRaw() ) )
+                    print('Reply Data: ' + str( icmpReplyPacket.getIcmpData() ) )
+                    print('Is Valid? ' + str( icmpReplyPacket.getIcmpData_isValid() ) )
+                else: 0
+
+            # set valid response
+            if icmpReplyPacket.getIcmpSequenceNumber_isValid()\
+                 and icmpReplyPacket.getIcmpIdentifier_isValid()\
+                 and icmpReplyPacket.getIcmpData_isValid():
+                    icmpReplyPacket.setIsValidResponse(True)
+                    
+            else:
+                icmpReplyPacket.setIsValidResponse(False)
+            
+            print('\nPacket Valid? ' + str(icmpReplyPacket.isValidResponse()) + '\n') if self.__DEBUG_IcmpPacket else 0
+            
 
         # ############################################################################################################ #
         # IcmpPacket Class Public Functions                                                                            #
@@ -230,7 +268,7 @@ class IcmpHelperLibrary:
             if len(self.__icmpTarget.strip()) <= 0 | len(self.__destinationIpAddress.strip()) <= 0:
                 self.setIcmpTarget("127.0.0.1")
 
-            print("Pinging (" + self.__icmpTarget + ") " + self.__destinationIpAddress)
+            # print("Pinging (" + self.__icmpTarget + ") " + self.__destinationIpAddress)
 
             mySocket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
             mySocket.settimeout(self.__ipTimeout)
@@ -282,7 +320,7 @@ class IcmpHelperLibrary:
                     elif icmpType == 0:                         # Echo Reply
                         icmpReplyPacket = IcmpHelperLibrary.IcmpPacket_EchoReply(recvPacket)
                         self.__validateIcmpReplyPacketWithOriginalPingData(icmpReplyPacket)
-                        icmpReplyPacket.printResultToConsole(self.getTtl(), timeReceived, addr)
+                        icmpReplyPacket.printResultToConsole(self.getTtl(), timeReceived, addr, self)
                         return      # Echo reply is the end and therefore should return
 
                     else:
@@ -333,6 +371,9 @@ class IcmpHelperLibrary:
         # ############################################################################################################ #
         __recvPacket = b''
         __isValidResponse = False
+        icmpIdentifier_isValid = False
+        icmpSequenceNumber_isValid = False
+        icmpData_isValid = False
 
         # ############################################################################################################ #
         # IcmpPacket_EchoReply Constructors                                                                            #
@@ -400,6 +441,15 @@ class IcmpHelperLibrary:
             # This accounts for bytes 36 to the end of the packet.
             return self.__recvPacket[36:].decode('utf-8')
 
+        def getIcmpIdentifier_isValid(self):
+            return self.icmpIdentifier_isValid
+
+        def getIcmpSequenceNumber_isValid(self):
+            return self.icmpSequenceNumber_isValid
+
+        def getIcmpData_isValid(self):
+            return self.icmpData_isValid
+
         def isValidResponse(self):
             return self.__isValidResponse
 
@@ -412,6 +462,15 @@ class IcmpHelperLibrary:
         # ############################################################################################################ #
         def setIsValidResponse(self, booleanValue):
             self.__isValidResponse = booleanValue
+
+        def setIcmpIdentifier_isValid(self, booleanValue):
+            self.icmpIdentifier_isValid = booleanValue
+
+        def setIcmpSequenceNumber_isValid(self, booleanValue):
+            self.icmpSequenceNumber_isValid = booleanValue
+
+        def setIcmpData_isValid(self, booleanValue):
+            self.icmpData_isValid = booleanValue
 
         # ############################################################################################################ #
         # IcmpPacket_EchoReply Private Functions                                                                       #
@@ -431,7 +490,7 @@ class IcmpHelperLibrary:
         #                                                                                                              #
         #                                                                                                              #
         # ############################################################################################################ #
-        def printResultToConsole(self, ttl, timeReceived, addr):
+        def printResultToConsole(self, ttl, timeReceived, addr, original):
             bytes = struct.calcsize("d")
             timeSent = struct.unpack("d", self.__recvPacket[28:28 + bytes])[0]
             print("  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d        Identifier=%d    Sequence Number=%d    %s" %
@@ -445,6 +504,23 @@ class IcmpHelperLibrary:
                       addr[0]
                   )
                  )
+            if not self.getIcmpSequenceNumber_isValid():
+                print('Sequence Number Error.\n\
+                    Expected: ' + str(original.getPacketSequenceNumber()) + '\n\
+                        Actual: ' + str(self.getIcmpSequenceNumber()))
+
+            if not self.getIcmpIdentifier_isValid():
+                print('Identifier Error.\n\
+                    Expected: ' + str(original.getPacketIdentifier()) + '\n\
+                        Actual: ' + str(self.getIcmpIdentifier()))
+
+            if not self.getIcmpData_isValid():
+                print('Data Error. \n\
+                    Expected: ' + str(original.getDataRaw()) + '\n\
+                        Actual: ' + str(self.getIcmpData()))
+
+            print('Is Packet Valid? ' + str(self.isValidResponse()))
+
 
     # ################################################################################################################ #
     # Class IcmpHelperLibrary                                                                                          #
@@ -504,6 +580,9 @@ class IcmpHelperLibrary:
     # ################################################################################################################ #
     def sendPing(self, targetHost):
         print("ping Started...") if self.__DEBUG_IcmpHelperLibrary else 0
+
+        print('Pinging ' + targetHost)
+
         self.__sendIcmpEchoRequest(targetHost)
 
     def traceRoute(self, targetHost):
