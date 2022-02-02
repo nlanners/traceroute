@@ -504,21 +504,26 @@ class IcmpHelperLibrary:
                       addr[0]
                   )
                  )
+
+            # Sequence Number Error
             if not self.getIcmpSequenceNumber_isValid():
                 print('Sequence Number Error.\n\
                     Expected: ' + str(original.getPacketSequenceNumber()) + '\n\
                         Actual: ' + str(self.getIcmpSequenceNumber()))
 
+            # Identifier Error
             if not self.getIcmpIdentifier_isValid():
                 print('Identifier Error.\n\
                     Expected: ' + str(original.getPacketIdentifier()) + '\n\
                         Actual: ' + str(self.getIcmpIdentifier()))
 
+            # Data Error
             if not self.getIcmpData_isValid():
                 print('Data Error. \n\
                     Expected: ' + str(original.getDataRaw()) + '\n\
                         Actual: ' + str(self.getIcmpData()))
 
+            # Valid Packet?
             print('Is Packet Valid? ' + str(self.isValidResponse()))
 
 
